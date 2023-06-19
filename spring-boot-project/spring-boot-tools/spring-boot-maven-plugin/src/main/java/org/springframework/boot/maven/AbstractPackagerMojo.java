@@ -105,6 +105,17 @@ public abstract class AbstractPackagerMojo extends AbstractDependencyFilterMojo 
 	public boolean includeSystemScope;
 
 	/**
+	 * Optional mapping of the dependent Jar files to be insert into a fat jar. The
+	 * mapping is based on the file mapping from <a href=
+	 * "https://maven.apache.org/plugins/maven-war-plugin/examples/file-name-mapping.html"
+	 * >maven-war-plugin</a>. In general you can use any property of Artifact and
+	 * ArtifactHandler as token.
+	 * @since 2.7.3
+	 */
+	@Parameter(property = "spring-boot.repackage.dependencyFileMapping", defaultValue = "")
+	public String dependencyFileMapping;
+
+	/**
 	 * Layer configuration with options to disable layer creation, exclude layer tools
 	 * jar, and provide a custom layers configuration file.
 	 * @since 2.3.0
@@ -185,7 +196,8 @@ public abstract class AbstractPackagerMojo extends AbstractDependencyFilterMojo 
 	protected final Libraries getLibraries(Collection<Dependency> unpacks) throws MojoExecutionException {
 		Set<Artifact> artifacts = this.project.getArtifacts();
 		Set<Artifact> includedArtifacts = filterDependencies(artifacts, getFilters(getAdditionalFilters()));
-		return new ArtifactsLibraries(artifacts, includedArtifacts, this.session.getProjects(), unpacks, getLog());
+		return new ArtifactsLibraries(artifacts, includedArtifacts, this.session.getProjects(), unpacks,
+				this.dependencyFileMapping, getLog());
 	}
 
 	private ArtifactsFilter[] getAdditionalFilters() {

@@ -211,6 +211,16 @@ class JarIntegrationTests extends AbstractArchiveIntegrationTests {
 	}
 
 	@TestTemplate
+	void whenAJarIsBuiltWithLibrariesWithMapping(MavenBuild mavenBuild) {
+		mavenBuild.project("jar-lib-name-mapping").execute((project) -> {
+			File repackaged = new File(project, "target/jar-lib-name-mapping-0.0.1.BUILD-SNAPSHOT.jar");
+			assertThat(jar(repackaged)).hasEntryWithNameStartingWith("BOOT-INF/classes/")
+				.hasEntryWithName("BOOT-INF/lib/spring-context.jar")
+				.hasEntryWithName("BOOT-INF/lib/jakarta.servlet-api.jar");
+		});
+	}
+
+	@TestTemplate
 	void whenAProjectUsesPomPackagingRepackagingIsSkipped(MavenBuild mavenBuild) {
 		mavenBuild.project("jar-pom").execute((project) -> {
 			File target = new File(project, "target");

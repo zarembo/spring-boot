@@ -3,6 +3,7 @@ plugins {
 	id "org.springframework.boot.conventions"
 	id "org.springframework.boot.maven-plugin"
 	id "org.springframework.boot.optional-dependencies"
+    id 'maven-publish'
 }
 
 description = "Spring Boot Maven Plugin"
@@ -11,7 +12,6 @@ configurations {
 	dependenciesBom
 	documentation
 }
-
 dependencies {
 	compileOnly("org.apache.maven.plugin-tools:maven-plugin-annotations")
 	compileOnly("org.sonatype.plexus:plexus-build-api")
@@ -23,7 +23,11 @@ dependencies {
 		exclude(group: "javax.enterprise", module: "cdi-api")
 		exclude(group: "javax.inject", module: "javax.inject")
 	}
-
+	implementation("org.apache.maven.shared:maven-mapping") {
+		exclude(group: "javax.enterprise", module: "cdi-api")
+		exclude(group: "javax.inject", module: "javax.inject")
+	}
+	
 	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-buildpack-platform"))
 	implementation(project(":spring-boot-project:spring-boot-tools:spring-boot-loader-tools"))
 
@@ -54,6 +58,19 @@ dependencies {
 	versionProperties(project(path: ":spring-boot-project:spring-boot-dependencies", configuration: "effectiveBom"))
 }
 
+
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+        	groupId = 'org.springframework.boot'
+			artifactId = 'spring-boot-maven-plugin'
+			version = '2.7.13-SNAPSHOT'
+			
+            //from components.java
+        }
+    }
+}
 ext {
 	versionElements = version.split("\\.")
 	xsdVersion = versionElements[0] + "." + versionElements[1]

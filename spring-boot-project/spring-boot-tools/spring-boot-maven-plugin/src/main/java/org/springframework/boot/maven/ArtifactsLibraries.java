@@ -29,6 +29,8 @@ import org.apache.maven.artifact.Artifact;
 import org.apache.maven.model.Dependency;
 import org.apache.maven.plugin.logging.Log;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.shared.mapping.MappingUtils;
+import org.codehaus.plexus.interpolation.InterpolationException;
 
 import org.springframework.boot.loader.tools.Libraries;
 import org.springframework.boot.loader.tools.Library;
@@ -43,6 +45,7 @@ import org.springframework.boot.loader.tools.LibraryScope;
  * @author Andy Wilkinson
  * @author Stephane Nicoll
  * @author Scott Frederick
+ * @author Iwan Zarembo
  * @since 1.0.0
  */
 public class ArtifactsLibraries implements Libraries {
@@ -65,6 +68,8 @@ public class ArtifactsLibraries implements Libraries {
 	private final Collection<MavenProject> localProjects;
 
 	private final Collection<Dependency> unpacks;
+
+	private final String libraryFileMapping;
 
 	private final Log log;
 
@@ -94,10 +99,28 @@ public class ArtifactsLibraries implements Libraries {
 	 */
 	public ArtifactsLibraries(Set<Artifact> artifacts, Set<Artifact> includedArtifacts,
 			Collection<MavenProject> localProjects, Collection<Dependency> unpacks, Log log) {
+		this(artifacts, includedArtifacts, localProjects, unpacks, null, log);
+	}
+
+	/**
+	 * Creates a new {@code ArtifactsLibraries} from the given {@code artifacts}.
+	 * @param artifacts all artifacts that can be represented as libraries.
+	 * @param includedArtifacts the actual artifacts to include in the fat jar.
+	 * @param localProjects projects for which {@link Library#isLocal() local} libraries
+	 * should be created.
+	 * @param unpacks artifacts that should be unpacked on launch.
+	 * @param libraryFileMapping the file name mapping pattern for the libraries to use.
+	 * @param log the log.
+	 * @since 2.7.3
+	 */
+	public ArtifactsLibraries(Set<Artifact> artifacts, Set<Artifact> includedArtifacts,
+			Collection<MavenProject> localProjects, Collection<Dependency> unpacks, String libraryFileMapping,
+			Log log) {
 		this.artifacts = artifacts;
 		this.includedArtifacts = includedArtifacts;
 		this.localProjects = localProjects;
 		this.unpacks = unpacks;
+		this.libraryFileMapping = libraryFileMapping;
 		this.log = log;
 	}
 
@@ -124,7 +147,7 @@ public class ArtifactsLibraries implements Libraries {
 		}
 	}
 
-	private Set<String> getDuplicates(Set<Artifact> artifacts) {
+	private Set<String> getDuplicates(Set<Artifact> artifacts) throws IOException {
 		Set<String> duplicates = new HashSet<>();
 		Set<String> seen = new HashSet<>();
 		for (Artifact artifact : artifacts) {
@@ -162,7 +185,29 @@ public class ArtifactsLibraries implements Libraries {
 		return false;
 	}
 
-	private String getFileName(Artifact artifact) {
+	/**
+	 * Used to determine the final file name packaged in the artifact later. The name
+	 * depends on the the {@link #libraryFileMapping} value. If it contains a mapping
+	 * value then this mapping will be used for the project dependencies, except the
+	 * snapshot dependencies. In case the {@link #libraryFileMapping} is <code>null</code>
+	 * or empty, then the returned name will be
+	 * <code>artifactId-baseVersion-classifier.extension</code>. The classifier is
+	 * optional.
+	 * @param artifact The current processed artifact.
+	 * @return The file name for the library in the build result.
+	 * @throws IOException In case the mapping string is invalid.
+	 * @see {@link AbstractPackagerMojo#dependencyFileMapping}
+	 */
+	private String getFileName(Artifact artifact) throws IOException {
+		if (this.libraryFileMapping != null && !this.libraryFileMapping.isEmpty()) {
+			try {
+				return MappingUtils.evaluateFileNameMapping(this.libraryFileMapping, artifact);
+			}
+			catch (InterpolationException ex) {
+				throw new IOException("Provided file mapping " + this.libraryFileMapping + " invalid.", ex);
+			}
+		}
+
 		StringBuilder sb = new StringBuilder();
 		sb.append(artifact.getArtifactId()).append("-").append(artifact.getBaseVersion());
 		String classifier = artifact.getClassifier();

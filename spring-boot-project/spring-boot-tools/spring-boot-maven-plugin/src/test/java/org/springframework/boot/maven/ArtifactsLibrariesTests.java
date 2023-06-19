@@ -110,6 +110,21 @@ class ArtifactsLibrariesTests {
 	}
 
 	@Test
+	void dependencyFileMapping() throws Exception {
+		Artifact artifact1 = mock(Artifact.class);
+		given(artifact1.getScope()).willReturn("compile");
+		given(artifact1.getArtifactId()).willReturn("artifact");
+		given(artifact1.getFile()).willReturn(new File("artifact-1.0.jar"));
+		given(artifact1.getArtifactHandler()).willReturn(this.artifactHandler);
+		this.artifacts = new LinkedHashSet<>(Arrays.asList(artifact1));
+		this.libs = new ArtifactsLibraries(this.artifacts, Collections.emptySet(), Collections.emptyList(),
+				Collections.emptyList(), "@{artifactId}@.@{extension}@", mock(Log.class));
+		this.libs.doWithLibraries(this.callback);
+		then(this.callback).should(times(1)).library(this.libraryCaptor.capture());
+		assertThat(this.libraryCaptor.getAllValues().get(0).getName()).isEqualTo("artifact.jar");
+	}
+
+	@Test
 	void renamesDuplicates() throws Exception {
 		Artifact artifact1 = mock(Artifact.class);
 		Artifact artifact2 = mock(Artifact.class);
